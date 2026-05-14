@@ -1,7 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
 }
+
+def hasInjectedSigning = providers.gradleProperty('android.injected.signing.store.file').isPresent()
 
 android {
     namespace 'me.bingyue.fuckbiliads'
@@ -16,9 +17,21 @@ android {
 
     }
 
+    signingConfigs {
+        release {
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+            enableV4Signing false
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
+            if (hasInjectedSigning) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -29,8 +42,25 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    packaging {
+        resources {
+            merges += 'META-INF/xposed/*'
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType('release')) { variant ->
+        if (variant.signingConfig != null) {
+            variant.signingConfig.enableV1Signing.set(true)
+            variant.signingConfig.enableV2Signing.set(true)
+            variant.signingConfig.enableV3Signing.set(true)
+            variant.signingConfig.enableV4Signing.set(false)
+        }
+    }
 }
 
 dependencies {
-    compileOnly(libs.api)
+    compileOnly libs.libxposed.api
 }

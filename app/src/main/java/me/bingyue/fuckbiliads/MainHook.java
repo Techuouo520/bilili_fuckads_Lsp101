@@ -1,17 +1,37 @@
 package me.bingyue.fuckbiliads;
 
+import java.lang.reflect.Method;
 
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodReplacement;
-import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import io.github.libxposed.api.XposedInterface;
+import io.github.libxposed.api.XposedModule;
+import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam;
 
+public class MainHook extends XposedModule {
+    private static final String TARGET_PACKAGE = "tv.danmaku.bili";
+    private static final String SPLASH_CLASS = "tv.danmaku.bili.ui.splash.ad.model.Splash";
 
-
-public class MainHook implements IXposedHookLoadPackage {
     @Override
-    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-        if (!lpparam.packageName.equals("tv.danmaku.bili")) return;
-        XposedHelpers.findAndHookMethod("tv.danmaku.bili.ui.splash.ad.model.Splash", lpparam.classLoader, "isValid", XC_MethodReplacement.returnConstant(false));
+    public void onPackageReady(PackageReadyParam param) {
+        if (!TARGET_PACKAGE.equals(param.getPackageName())) {
+            return;
+        }
+
+        try {
+            Class<?> splashClass = param.getClassLoader().loadClass(SPLASH_CLASS);
+            Method isValid = splashClass.getDeclaredMethod("isValid");
+            if (isValid.getReturnType() != boolean.class) {
+                return;
+            }
+            isValid.setAccessible(true);
+            hook(isValid).intercept(new Hooker());
+        } catch (ReflectiveOperationException ignored) {
+        }
+    }
+
+    public static class Hooker implements XposedInterface.Hooker {
+        @Override
+        public Object intercept(XposedInterface.Chain chain) {
+            return false;
+        }
     }
 }
